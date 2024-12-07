@@ -1,0 +1,79 @@
+// schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String      @id @default(cuid()) @map("_id")
+  username   String      @unique
+  email      String      @unique
+  password   String
+  age        Int
+  userGroups UserGroup[]
+  messages   Message[]
+  replies    Reply[]
+}
+
+model Group {
+  id         String      @id @default(cuid()) @map("_id")
+  name       String
+  userGroups UserGroup[]
+  messages   Message[]
+}
+
+model UserGroup {
+  id        String   @id @default(cuid()) @map("_id")
+  userId    String
+  groupId   String
+  user      User     @relation(fields: [userId], references: [id])
+  group     Group    @relation(fields: [groupId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, groupId]) // Ensures that a user can be in the same group only once
+  @@index([userId]) // Index on userId for fast lookups
+  @@index([groupId]) // Index on groupId for fast lookups
+}
+
+model Video {
+  id        String    @id @default(cuid()) @map("_id")
+  url       String
+  createdAt DateTime  @default(now())
+  messages  Message[]
+}
+
+model Message {
+  id        String     @id @default(cuid()) @map("_id")
+  content   String?
+  url       String?
+  mediaType MediaType?
+  video     Video?     @relation(fields: [videoId], references: [id])
+  videoId   String?
+  sender    User       @relation(fields: [senderId], references: [id])
+  senderId  String
+  group     Group      @relation(fields: [groupId], references: [id])
+  groupId   String
+  createdAt DateTime   @default(now())
+  replies   Reply[]
+}
+
+model Reply {
+  id        String   @id @default(cuid()) @map("_id")
+  content   String
+  message   Message  @relation(fields: [messageId], references: [id])
+  messageId String
+  sender    User     @relation(fields: [senderId], references: [id])
+  senderId  String
+  createdAt DateTime @default(now())
+}
+
+enum MediaType {
+  TEXT
+  IMAGE
+  VIDEO
+}
